@@ -24,7 +24,7 @@ class _CapNhatSanPhamState extends State<CapNhatSanPham> {
   final TextEditingController descrip= TextEditingController();
   final TextEditingController name = TextEditingController();
   String size = ""; // Giá trị ban đầu
-  String imageURL = "";
+  String imageURL = " ";
 
   Future updateCaPhe(CaPhe caphe, String id) async
   {
