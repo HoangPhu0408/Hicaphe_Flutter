@@ -90,7 +90,7 @@ class _DanhMucSanPhamKHState extends State<DanhMucSanPhamKH> {
       double total = 0.0;
       for (final QueryDocumentSnapshot doc in snapshot.docs) {
         final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        final double thanhTien = data['thanhTien'];
+        final int thanhTien = data['thanhTien'];
         total += thanhTien;
       }
       setState(() {

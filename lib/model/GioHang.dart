@@ -11,50 +11,59 @@ class GioHangKH {
   final String uid; // Thêm trường mới này
 
   GioHangKH(
-      this.donGia,
-      this.id,
-      this.idCate,
-      this.soluong,
-      this.thanhTien,
-      this.uid, // Thêm vào constructor
-      );
+    this.donGia,
+    this.id,
+    this.idCate,
+    this.soluong,
+    this.thanhTien,
+    this.uid, // Thêm vào constructor
+  );
 
-  static Future<void> moveCartToBill() async {
-    CollectionReference cartCollection = FirebaseFirestore.instance.collection('Cart');
-    CollectionReference billCollection = FirebaseFirestore.instance.collection('Bill');
+  static Future<void> moveCartToBill(String uid) async {
+    double tonghoadon = 0;
+    CollectionReference cartCollection =
+        FirebaseFirestore.instance.collection('Cart');
+    CollectionReference billCollection =
+        FirebaseFirestore.instance.collection('Bill');
 
     try {
-      QuerySnapshot cartSnapshot = await cartCollection.get();
+      QuerySnapshot cartSnapshot = await cartCollection.where('uid',isEqualTo: uid).get();
 
       if (cartSnapshot.docs.isNotEmpty) {
-        // Thêm dữ liệu từ giỏ hàng vào bảng Bill
+        // Tạo một document mới trong collection "Bill"
+        DocumentReference billDocRef =
+            billCollection.doc(); // Sử dụng documentID mới
+
         for (QueryDocumentSnapshot doc in cartSnapshot.docs) {
           Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-          String ngaydathang = DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now());
-          final FirebaseFirestore firestore = FirebaseFirestore.instance;
-          User? user = FirebaseAuth.instance.currentUser;
-          if (user == null) {
-            // Xử lý trường hợp người dùng chưa đăng nhập
-            return;
-          }
-          String uid = user.uid;
-          DocumentSnapshot Users = await firestore.collection("Users").doc(uid).get();
-          String Uid = Users.id;
-          final trangthai = " Đã đặt hàng";
-          final phuongThucThanhToan = "Tiền mặt";
-          await billCollection.add({
+          tonghoadon += data['thanhTien'];
+          // Thêm dữ liệu sản phẩm vào subcollection 'products' của document Bill
+          await billDocRef.collection('products').add({
             'donGia': data['donGia'],
             'id': data['id'],
             'idCate': data['idCate'],
             'soluong': data['soluong'],
             'thanhTien': data['thanhTien'],
-            'ngayDH': ngaydathang,
-            'uid': Uid,
-            'tinhTrang': trangthai,
-            'phuongThucThanhToan': phuongThucThanhToan,
-            // ... Thêm các trường khác nếu cần
           });
         }
+
+        // Thêm thông tin chung của đơn hàng vào document Bill
+        String ngaydathang =
+            DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now());
+        final FirebaseFirestore firestore = FirebaseFirestore.instance;
+        DocumentSnapshot Users =
+            await firestore.collection("Users").doc(uid).get();
+        String Uid = uid;
+        final trangthai = "Đã đặt hàng";
+        final phuongThucThanhToan = "Tiền mặt";
+
+        await billDocRef.set({
+          'ngayDH': ngaydathang,
+          'uid': Uid,
+          'tinhTrang': trangthai,
+          'phuongThucThanhToan': phuongThucThanhToan,
+          'tongHoaDon': tonghoadon,
+        });
 
         // Xóa tất cả dữ liệu từ bảng Cart
         for (QueryDocumentSnapshot doc in cartSnapshot.docs) {
@@ -85,26 +94,24 @@ class GioHangKH {
     );
   }
 }
+
 Future<List<GioHangKH>> getCartData() async {
-  CollectionReference cartCollection = FirebaseFirestore.instance.collection('Cart');
+  CollectionReference cartCollection =
+      FirebaseFirestore.instance.collection('Cart');
   QuerySnapshot cartSnapshot = await cartCollection.get();
 
   List<GioHangKH> gioHangList = [];
 
   for (QueryDocumentSnapshot doc in cartSnapshot.docs) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    gioHangList.add(
-        GioHangKH(
-          data['donGia'],
-          data['id'],
-          data['idCate'],
-          data['soluong'],
-          data['thanhTien'],
-          data['uid'],
-        )
-    );
+    gioHangList.add(GioHangKH(
+      data['donGia'],
+      data['id'],
+      data['idCate'],
+      data['soluong'],
+      data['thanhTien'],
+      data['uid'],
+    ));
   }
   return gioHangList;
 }
-
-

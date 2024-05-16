@@ -434,7 +434,6 @@ class _ChiTietSanPhamKHState extends State<ChiTietSanPhamKH> {
                                           .collection("FavoriteProduct")
                                           .where("id", isEqualTo: id)
                                           .get();
-
                                       User? user = FirebaseAuth.instance.currentUser;
                                       if (user == null) {
                                         // Xử lý trường hợp người dùng chưa đăng nhập

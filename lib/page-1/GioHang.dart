@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:ui';
@@ -15,17 +16,16 @@ class GioHang extends StatefulWidget {
 
 final CollectionReference updataGioHang =
     FirebaseFirestore.instance.collection('Cart');
-
-Future<double> calculateTotalAmount() async {
-  final QuerySnapshot snapshot = await updataGioHang.get();
+late Stream<QuerySnapshot> productStreamgiohang;
+Future<double> calculateTotalAmount(String uid) async {
   double total = 0.0;
-
+  final QuerySnapshot snapshot =
+      await updataGioHang.where('uid', isEqualTo: uid).get();
   for (final QueryDocumentSnapshot doc in snapshot.docs) {
     final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     final thanhTien = data['thanhTien'];
     total += thanhTien;
   }
-
   return total;
 }
 
@@ -34,18 +34,22 @@ class _GioHangState extends State<GioHang> {
 
   // Gọi hàm để lấy ID của Cart
   bool sapXepNguyenLieu = true;
-  late Stream<QuerySnapshot> productStreamgiohang;
-  void updateProductStreamNL() {
-    setState(() {
-      productStreamgiohang = updataGioHang.orderBy('tenSP').snapshots();
-    });
-  }
 
   @override
   void initState() {
     super.initState();
-    // Khởi tạo productStream với dữ liệu ban đầu
-    productStreamgiohang = updataGioHang.snapshots();
+    final user = FirebaseAuth.instance.currentUser;
+    String? userID = user?.uid;
+
+    productStreamgiohang = FirebaseFirestore.instance
+        .collection('Cart')
+        .where('uid', isEqualTo: userID)
+        .snapshots();
+    calculateTotalAmount(userID!).then((double total) {
+      setState(() {
+        tonghoadon = total;
+      });
+    });
   }
 
   @override
@@ -198,7 +202,7 @@ class _GioHangState extends State<GioHang> {
                                       Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                              builder: (context) => DatHang()));
+                                              builder: (context) => const DatHang()));
                                     },
                                     child: Text(
                                       'Đặt hàng ',
@@ -223,15 +227,10 @@ class _GioHangState extends State<GioHang> {
                 ),
                 Expanded(
                   child: StreamBuilder<QuerySnapshot>(
-                      stream: updataGioHang.snapshots(),
+                      stream: productStreamgiohang,
                       builder: (context, snapshot) {
                         final giohang = snapshot.data!.docs;
                         // Tính tổng tiền từ dữ liệu Firebase
-                        calculateTotalAmount().then((double total) {
-                          setState(() {
-                            tonghoadon = total;
-                          });
-                        });
                         return ListView.builder(
                             // đưa dữ liệu hiển thị lên màn hình
                             itemCount: giohang.length,
@@ -307,15 +306,17 @@ class _GioHangState extends State<GioHang> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text("Kích thước : " + kichthuoc),
-                                              Text(dongia.toString() +
-                                                  ' VND'),
+                                              Text(dongia.toString() + ' VND'),
                                             ],
                                           ),
                                           trailing: SingleChildScrollView(
                                             child: Column(
                                               // crossAxisAlignment: CrossAxisAlignment.center,
                                               children: [
-                                                _tanggiamsoluong(id,soluong,dongia),
+                                                _tanggiamsoluong(
+                                                    id, soluong, dongia,
+                                                    documentSnapshotGioHang[
+                                                        'uid']),
                                                 Container(
                                                   // btxoaWL1 (5:462)
                                                   margin: EdgeInsets.only(
@@ -355,7 +356,7 @@ class _GioHangState extends State<GioHang> {
     );
   }
 
-  Widget _tanggiamsoluong(String documentId, int quantity, int dongia) {
+  Widget _tanggiamsoluong(String documentId, int quantity, int dongia, String uid) {
     return FittedBox(
       child: Row(
         children: [
@@ -371,7 +372,7 @@ class _GioHangState extends State<GioHang> {
                   'thanhTien': dongia * (quantity - 1),
                 });
                 setState(() {
-                  calculateTotalAmount();
+                  calculateTotalAmount(uid);
                 });
               }
             },
@@ -388,7 +389,7 @@ class _GioHangState extends State<GioHang> {
                 'thanhTien': dongia * (quantity + 1),
               });
               setState(() {
-                calculateTotalAmount();
+                calculateTotalAmount(uid);
               });
             },
             icon: Icon(Icons.add),

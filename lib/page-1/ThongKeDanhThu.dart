@@ -33,7 +33,7 @@ class _ThongKeDoanhThuState extends State<ThongKeDoanhThu> {
     QuerySnapshot querySnapshot =
     await FirebaseFirestore.instance.collection('Bill').get();
 
-    List<String> values = querySnapshot.docs.map((doc) => (doc.data() as Map<String, dynamic>)['thanhTien']?.toString() ?? '').toList();
+    List<String> values = querySnapshot.docs.map((doc) => (doc.data() as Map<String, dynamic>)['tongHoaDon']?.toString() ?? '').toList();
 
     setState(() {
       fieldValues = values;
@@ -378,54 +378,56 @@ class PieChart2State extends State<PieChart2> {
 
   Future<List<Map<String, dynamic>>> getCombinedData() async {
     try {
-      List<Map<String, dynamic>> combinedDataList = [];
-      Set<String> uniqueIdCates =
-      Set<String>(); // Use a Set to keep track of unique idCates
+      Map<String, Map<String, dynamic>> combinedDataMap =
+          {}; // Dùng Map thay vì List
+      Set<String> uniqueIdCates = Set<String>();
 
-      QuerySnapshot cartSnapshot =
-      await FirebaseFirestore.instance.collection('Bill').get();
-      List<DocumentSnapshot> cartDocs = cartSnapshot.docs;
+      QuerySnapshot billSnapshot =
+          await FirebaseFirestore.instance.collection('Bill').get();
+      List<DocumentSnapshot> billDocs = billSnapshot.docs;
 
-      for (int index = 0; index < cartDocs.length; index++) {
-        Map<String, dynamic> combinedData = {};
-        Map<String, dynamic> cartData =
-        cartDocs[index].data() as Map<String, dynamic>;
-        String idCate = cartData['idCate'];
+      for (int index = 0; index < billDocs.length; index++) {
+        Map<String, dynamic> billData =
+            billDocs[index].data() as Map<String, dynamic>;
 
-        // Check if idCate is already processed
-        if (uniqueIdCates.contains(idCate)) {
-          continue; // Skip this iteration if idCate is already in the Set
+        QuerySnapshot productsSnapshot =
+            await billDocs[index].reference.collection('products').get();
+        List<DocumentSnapshot> productDocs = productsSnapshot.docs;
+
+        for (int i = 0; i < productDocs.length; i++) {
+          String idCate = productDocs[i]['idCate'];
+
+          // Kiểm tra xem idCate đã được xử lý chưa
+          if (!uniqueIdCates.contains(idCate)) {
+            uniqueIdCates.add(idCate);
+            combinedDataMap[idCate] =
+                {}; // Tạo một entry mới trong Map nếu idCate chưa tồn tại
+            combinedDataMap[idCate]?['thanhTien'] =
+                0; // Khởi tạo giá trị thanhTien
+          }
+
+          // Lấy tổng giá trị thanhTien cho idCate
+          double thanhTien =
+              double.tryParse(productDocs[i]['thanhTien']?.toString() ?? '') ??
+                  0;
+          combinedDataMap[idCate]?['thanhTien'] += thanhTien;
         }
+      }
 
-        uniqueIdCates.add(idCate); // Add idCate to the Set
-
+      // Truy vấn collection "Category" và lấy thông tin quan trọng
+      await Future.forEach(combinedDataMap.keys, (idCate) async {
         DocumentSnapshot categorySnapshot = await FirebaseFirestore.instance
             .collection('Category')
             .doc(idCate)
             .get();
         Map<String, dynamic> categoryData =
-        categorySnapshot.data() as Map<String, dynamic>;
+            categorySnapshot.data() as Map<String, dynamic>;
+        combinedDataMap[idCate]?['importantFieldValue'] = categoryData['Name'];
+      });
 
-        // Lấy giá trị của trường dữ liệu quan trọng (ví dụ: 'name' là trường quan trọng)
-        combinedData['importantFieldValue'] = categoryData['Name'];
-        QuerySnapshot thanhTienSnapshot = await FirebaseFirestore.instance
-            .collection('Bill')
-            .where('idCate', isEqualTo: idCate)
-            .get();
-
-        // Lấy giá trị của trường thanhTien từ collection "Cart"
-        List<String> thanhTienList = thanhTienSnapshot.docs
-            .map((doc) =>
-        (doc.data() as Map<String, dynamic>)['thanhTien']?.toString() ??
-            '')
-            .toList();
-        double sum = thanhTienList
-            .map((value) => double.tryParse(value) ?? 0)
-            .fold(0, (total, value) => total + value);
-        combinedData['thanhTien'] = sum;
-
-        combinedDataList.add(combinedData);
-      }
+      // Chuyển dữ liệu từ Map sang List
+      List<Map<String, dynamic>> combinedDataList =
+          combinedDataMap.values.toList();
 
       return combinedDataList;
     } catch (e) {
@@ -433,6 +435,8 @@ class PieChart2State extends State<PieChart2> {
       return [];
     }
   }
+
+
 
   List<Color> getColors() {
     return [

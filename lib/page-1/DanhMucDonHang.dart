@@ -12,18 +12,6 @@ class DanhMucDonHang extends StatefulWidget {
 }
 
 class _DanhMucDonHangState extends State<DanhMucDonHang> {
-  Future<String> fetchDisplayName(String uid) async {
-    final DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
-        .collection('Users')
-        .doc(uid)
-        .get();
-
-    if (userSnapshot.exists) {
-      return userSnapshot['displayName'];
-    } else {
-      return 'Không có tên';
-    }
-  }
 
   final CollectionReference updatadonHang =FirebaseFirestore.instance.collection('Bill');
   bool sapXepdonhang = true;
@@ -161,30 +149,21 @@ class _DanhMucDonHangState extends State<DanhMucDonHang> {
                             // đưa dữ liệu hiển thị lên màn hình
                               itemCount:donhang.length,
                               itemBuilder: (context, document){
-                                print("Number of filtered items: ${donhang.length}"); // Add this lin
-                                for (var item in donhang) {
-                                  print('Item ID: ${item.id}, idSP: ${item['id']}');
-                                }
                                 final DocumentSnapshot documentSnapshotGioHang = donhang[document];
                                 final idGiohang = documentSnapshotGioHang['uid'];
-                                final idSP = documentSnapshotGioHang['id'];
-                                final dongia = documentSnapshotGioHang['donGia'];
+                                //final idSP = documentSnapshotGioHang['id'];
+                                final dongia = documentSnapshotGioHang['tongHoaDon'];
                                 final ngayDH = documentSnapshotGioHang['ngayDH'];
                                 final idhoadon = documentSnapshotGioHang.id;
                                 final tinhTrang = documentSnapshotGioHang['tinhTrang'];
                                 return StreamBuilder<DocumentSnapshot>(
                                     stream: FirebaseFirestore.instance.collection('Users').doc(idGiohang).snapshots(),
                                     builder: (context, index){
-                                      if (!index.hasData || index.data == null) {
-                                        // Handle the case where no data is available for the given idSP
-                                        return Text('Không có dữ liệu cho idSP: $idSP');
-                                      }
-                                      final productData = index.data?.data() as Map<String, dynamic>? ?? {};
-                                      if (productData.isEmpty) {
-                                        // Handle the case where the product data is empty
-                                        return Text('Dữ liệu sản phẩm trống cho idSP: $idSP');
-                                      }
-                                      final displayName= productData['displayName'];
+                                      final productData = index.data?.data()
+                                              as Map<String, dynamic>? ??
+                                          {};
+                                      final displayName =
+                                          productData['displayName'];
                                       return
                                         Card(
                                           child: ListTile(

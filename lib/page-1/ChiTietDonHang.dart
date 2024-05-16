@@ -426,7 +426,10 @@ class _ChiTetDonHangState extends State<ChiTetDonHang> {
               ),
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
-                    stream:  updataDatHang.snapshots(),
+                    stream:  updataDatHang
+                        .doc(widget.id)
+                        .collection('products')
+                        .snapshots(),
                     builder: (context,snapshot) {
                       final giohang = snapshot.data!.docs;
                       // Tính tổng tiền từ dữ liệu Firebase
@@ -434,7 +437,6 @@ class _ChiTetDonHangState extends State<ChiTetDonHang> {
                         // đưa dữ liệu hiển thị lên màn hình
                           itemCount: giohang.length,
                           itemBuilder: (context, document){
-                            print("Number of filtered items: ${giohang.length}"); // Add this lin
                             final DocumentSnapshot documentSnapshotGioHang = giohang[document];
                             final idSP = documentSnapshotGioHang['id'];
                             final soluong = documentSnapshotGioHang['soluong'];
